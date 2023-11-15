@@ -1,0 +1,93 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+from surprise import Dataset, Reader
+from surprise.model_selection import cross_validate, train_test_split
+from surprise import NormalPredictor, KNNBasic, KNNWithZScore, SVD
+
+
+
+if __name__ == '__main__':
+
+    data = pd.read_csv('ratings_small.csv', skiprows=1, header=None, names=['userId', 'movieId', 'rating', 'timestamp'])
+
+    reader = Reader(rating_scale=(1, 5))
+    data_surprise = Dataset.load_from_df(data[['userId', 'movieId', 'rating']], reader)
+
+
+    # Define the algorithms
+    pmf_algo = SVD()  # PMF is implemented as SVD in Surprise
+    user_cf_algo = KNNBasic(sim_options={'user_based': True})
+    item_cf_algo = KNNBasic(sim_options={'user_based': False})
+
+    # Define the metrics you want to compute
+    metrics = ['RMSE', 'MAE']
+
+    # Perform 5-fold cross-validation for each algorithm
+    pmf_cv_results = cross_validate(pmf_algo, data_surprise, measures=metrics, cv=5, verbose=True)
+    user_cf_cv_results = cross_validate(user_cf_algo, data_surprise, measures=metrics, cv=5, verbose=True)
+    item_cf_cv_results = cross_validate(item_cf_algo, data_surprise, measures=metrics, cv=5, verbose=True)
+
+    # Calculate the average MAE and RMSE for each algorithm
+    pmf_avg_mae = sum(pmf_cv_results['test_mae']) / len(pmf_cv_results['test_mae'])
+    pmf_avg_rmse = sum(pmf_cv_results['test_rmse']) / len(pmf_cv_results['test_rmse'])
+
+    user_cf_avg_mae = sum(user_cf_cv_results['test_mae']) / len(user_cf_cv_results['test_mae'])
+    user_cf_avg_rmse = sum(user_cf_cv_results['test_rmse']) / len(user_cf_cv_results['test_rmse'])
+
+    item_cf_avg_mae = sum(item_cf_cv_results['test_mae']) / len(item_cf_cv_results['test_mae'])
+    item_cf_avg_rmse = sum(item_cf_cv_results['test_rmse']) / len(item_cf_cv_results['test_rmse'])
+
+    # Compare the average performances
+    print("Average MAE for PMF:", pmf_avg_mae)
+    print("Average RMSE for PMF:", pmf_avg_rmse)
+
+    print("\nAverage MAE for User-based CF:", user_cf_avg_mae)
+    print("Average RMSE for User-based CF:", user_cf_avg_rmse)
+
+    print("\nAverage MAE for Item-based CF:", item_cf_avg_mae)
+    print("Average RMSE for Item-based CF:", item_cf_avg_rmse)
+
+    Step 6: Similarity Metrics
+    similarity_metrics = ['cosine', 'msd', 'pearson']
+    results_ubcf = []
+    results_ibcf = []
+
+    for metric in similarity_metrics:
+        algo_ubcf = KNNBasic(sim_options={'name': metric, 'user_based': True})
+        algo_ibcf = KNNBasic(sim_options={'name': metric, 'user_based': False})
+
+        results_ubcf.append(
+            cross_validate(algo_ubcf, data_surprise, measures=['RMSE'], cv=5, verbose=True)['test_rmse'].mean())
+        results_ibcf.append(
+            cross_validate(algo_ibcf, data_surprise, measures=['RMSE'], cv=5, verbose=True)['test_rmse'].mean())
+
+    # Plotting Results
+    plt.plot(similarity_metrics, results_ubcf, label='User-Based CF')
+    plt.plot(similarity_metrics, results_ibcf, label='Item-Based CF')
+    plt.xlabel('Similarity Metric')
+    plt.ylabel('Mean RMSE')
+    plt.legend()
+    plt.show()
+
+    # Step 7: Number of Neighbors
+    neighbor_range = [i for i in range(1, 15)]
+    results_ubcf = []
+    results_ibcf = []
+
+    for k in neighbor_range:
+        print("Iteration: " + str(k))
+        algo_ubcf = KNNBasic(k=k, sim_options={'name': 'cosine', 'user_based': True})
+        algo_ibcf = KNNBasic(k=k, sim_options={'name': 'cosine', 'user_based': False})
+
+        results_ubcf.append(
+            cross_validate(algo_ubcf, data_surprise, measures=['RMSE'], cv=5, verbose=True)['test_rmse'].mean())
+        results_ibcf.append(
+            cross_validate(algo_ibcf, data_surprise, measures=['RMSE'], cv=5, verbose=True)['test_rmse'].mean())
+
+    # Plotting Results
+    plt.plot(neighbor_range, results_ubcf, label='User-Based CF')
+    plt.plot(neighbor_range, results_ibcf, label='Item-Based CF')
+    plt.xlabel('Number of Neighbors (K)')
+    plt.ylabel('Mean RMSE')
+    plt.legend()
+    plt.show()
