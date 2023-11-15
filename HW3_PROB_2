@@ -47,7 +47,7 @@ if __name__ == '__main__':
     print("\nAverage MAE for Item-based CF:", item_cf_avg_mae)
     print("Average RMSE for Item-based CF:", item_cf_avg_rmse)
 
-    Step 6: Similarity Metrics
+    # Step 6: Similarity Metrics
     similarity_metrics = ['cosine', 'msd', 'pearson']
     results_ubcf = []
     results_ibcf = []
