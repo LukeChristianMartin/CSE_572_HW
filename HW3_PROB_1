@@ -24,11 +24,25 @@ class KMeans:
 
     def compute_distance(self, x, centroid):
         if self.distance_metric == 'euclidean':
-            return np.linalg.norm(x - centroid)
+            return self.euclidean_distance(x, centroid)
         elif self.distance_metric == 'cosine':
-            return 1 - cosine(x, centroid)
+            return 1 - self.cosine_similarity(x, centroid)
         elif self.distance_metric == 'jaccard':
-            return 1 - jaccard(x, centroid)
+            return 1 - self.jaccard_similarity(x, centroid)
+
+    def euclidean_distance(self, x, y):
+        return np.linalg.norm(x - y)
+
+    def cosine_similarity(self, x, y):
+        dot_product = np.dot(x, y)
+        norm_x = np.linalg.norm(x)
+        norm_y = np.linalg.norm(y)
+        return dot_product / (norm_x * norm_y)
+
+    def jaccard_similarity(self, x, y):
+        intersection = np.sum(np.minimum(x, y))
+        union = np.sum(np.maximum(x, y))
+        return intersection / union if union != 0 else 0
 
     def assign_clusters(self, X, centroids):
         distances = euclidean_distances(X, centroids)
@@ -46,7 +60,7 @@ class KMeans:
 
     def fit(self, X):
         self.centroids = self.initialize_centroids(X)
-        prev_sse = 1e20
+        prev_sse = 1e30
         next_sse = 0
 
         for iter in range(self.max_iterations):
@@ -59,16 +73,10 @@ class KMeans:
             # Update centroids
             self.centroids = self.update_centroids(X, labels)
 
-            # Check for convergence
             error = np.linalg.norm(self.centroids - old_centroids)
             next_sse = self.calculate_sse(X, labels)
-            # print("Error: " + str(error))
-            # print("next_sse: " + str(next_sse))
 
-            # if error < self.tol or next_sse > prev_sse or iter > 100:
-
-
-            if iter == self.max_iterations - 1:
+            if error < self.tol or next_sse > prev_sse or iter > 100:
 
                 self.number_of_iterations = iter
                 break
